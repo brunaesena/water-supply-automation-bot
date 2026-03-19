@@ -1,17 +1,27 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone  # Adicionado timezone aqui
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
 import requests
 
 load_dotenv()
 
+def get_recife_time():
+    # Removido o espaço extra e usando timezone nativo
+    tz_recife = timezone(timedelta(hours=-3))
+    return datetime.now(tz_recife)
+
 def enviar_telegram(mensagem):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if token and chat_id:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
-        requests.post(url, data={"chat_id": chat_id, "text": mensagem, "parse_mode": "Markdown"})
+        # Adicionado o retorno da resposta para logar no terminal
+        res = requests.post(url, data={"chat_id": chat_id, "text": mensagem, "parse_mode": "Markdown"})
+        if res.status_code == 200:
+            print("✅ Mensagem enviada para o Telegram!")
+        else:
+            print(f"❌ Erro ao enviar para o Telegram: {res.text}")
 
 def executar_automacao_semanal():
     endereco = "Alto José do Pinho, Recife, Pernambuco"
@@ -30,7 +40,7 @@ def executar_automacao_semanal():
         print("⏳ Aguardando processamento do mapa (7s)...")
         page.wait_for_timeout(7000)
 
-        # Lógica JS baseada na descoberta das classes específicas
+        # Lógica JS baseada na descoberta das classes que você fez!
         dados_calendario = page.evaluate("""
             () => {
                 const celulas = document.querySelectorAll('td.jqx-calendar-cell');
@@ -44,7 +54,6 @@ def executar_automacao_semanal():
                     if (dia && !isOtherMonth) {
                         let status = "⚪ Sem Abastecimento";
 
-                        // A ordem aqui é fundamental para não haver sobreposição
                         if (classes.includes('specialdate')) {
                             status = "🔵 Abastecimento Normal";
                         } 
@@ -62,7 +71,7 @@ def executar_automacao_semanal():
             }
         """)
 
-        hoje = datetime.now()
+        hoje = get_recife_time()
         dias_pt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"]
         linhas_relatorio = []
 
